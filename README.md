@@ -73,6 +73,47 @@ An SQL data cleaning and preparation project using the [Brazilian E-Commerce Pub
 - 99,224 rows
 - 87,658 null titles and 58,256 null messages are expected since customers often skip writing comments
 - Review scores are valid, range 1-5, with 5 being most common (57,328)
-- 814 review IDs were each linked to 2 different `order_id` values. Both order IDs exist in the orders table, both delivered, and each order already has 1 review, so there was no way to tell which one is correct. Kept all rows as a source system bug. May cause double counting when joining to orders.
+- 814 review IDs were each linked to 2 different `order_id` values. Both order IDs exist in the orders table, both were delivered, and each order already has 1 review, so there was no way to tell which one is correct. Kept all rows as a source system bug. May cause double counting when joining two orders.
 
 ---
+
+## Final View: olist_orders
+
+All 8 tables are joined using `LEFT JOIN` with `orders` as the central table. An initial `INNER JOIN` approach dropped 775 orders that had no matching rows in `order_items`. Switching to `LEFT JOIN` kept all 99,441 orders.
+
+- **Total rows in view:** 119,143 (due to many relationships across payments, items, and reviews)
+- **Distinct orders:** 99,441
+- **Total revenue:** $20,579,664.01
+
+---
+
+## Analysis Queries
+
+| Query | Finding |
+|---|---|
+| Top 10 categories by revenue | Bed, bath & table leads overall; watches & gifts has the highest average order value at $228.52 |
+| Average delivery time | 12 days on average, range 0-210 days |
+| On-time delivery rate | 92.2% on time (106,648 out of 115,715 delivered orders) |
+| Top 10 sellers by revenue | 9 out of 10 are based in São Paulo |
+| Review scores by category | CDs/DVDs/musicals scored 4.64/5 but only had 12 orders, making it unreliable |
+| Monthly orders over time | Peak was November 2017 at 7,544 orders and $1.6M revenue. September and October 2018 appear to drop sharply but the dataset ends October 17, 2018, so both months are incomplete |
+
+---
+
+## Known Data Issues
+
+| Table | Issue | Action Taken |
+|---|---|---|
+| orders | 8 delivered orders missing a delivery date | Flagged, kept |
+| orders | 14 delivered orders missing approval timestamp | Flagged, kept |
+| geolocation | Import truncated some lat/lng values to NULL | Deleted affected rows |
+| order_reviews | 814 review IDs each linked to 2 order IDs | Kept all rows, source system bug |
+| sellers | Unrecoverable city values (number, email address) | Set to NULL |
+
+---
+
+## Tools & Environment
+
+- **Database:** Microsoft SQL Server
+- **Language:** SQL
+- **Functions used:** `STRING_SPLIT`, `FOR XML PATH`, `STUFF`, `CHARINDEX`, `ROW_NUMBER()`, `DATEDIFF`, `FORMAT`, `sp_rename`, CTEs, window functions
